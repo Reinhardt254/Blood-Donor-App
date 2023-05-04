@@ -1,0 +1,309 @@
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs, doc, getDoc } from "firebase/firestore";
+
+// Initialize Firebase
+const firebaseConfig = {
+  apiKey: "your-api-key",
+  authDomain: "your-auth-domain",
+  projectId: "your-project-id",
+  storageBucket: "your-storage-bucket",
+  messagingSenderId: "your-messaging-sender-id",
+  appId: "your-app-id",
+  measurementId: "your-measurement-id"
+};
+
+const app = initializeApp(firebaseConfig);
+
+// Define the user ID for which to retrieve recommendations
+const userId = "user123";
+
+// Get a reference to the Firestore database
+const db = getFirestore(app);
+
+// Get the user's blood type from the database
+getDoc(doc(db, "users", userId)).then((snapshot) => {
+  const userBloodType = snapshot.data().bloodType;
+  const compatibleDonors = [];
+
+  // Define the ABO compatibility rules
+  const aboCompatibility = {
+    O: ["O+", "O-"],
+    A: ["A+", "A-", "O+", "O-"],
+    B: ["B+", "B-", "O+", "O-"],
+    AB: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+  };
+
+  // Define the Rh compatibility rules
+  const rhCompatibility = {
+    "+": ["+", "-"],
+    "-": ["-"],
+  };
+
+  // Query the database for donors with compatible blood types
+  getDocs(collection(db, "users")).then((querySnapshot) => {
+    querySnapshot.forEach((doc) => {
+      const donorBloodType = doc.data().bloodType;
+
+      // Check if the donor's blood type is compatible for donation based on the ABO and Rh systems
+      if (
+        aboCompatibility[userBloodType.split(/[+-]/)[0]].includes(
+          donorBloodType
+        ) &&
+        rhCompatibility[userBloodType.split(/[+-]/)[1]].includes(
+          donorBloodType.split(/[+-]/)[1]
+        )
+      ) {
+        compatibleDonors.push(doc.id);
+      }
+    });
+
+    // Display the list of compatible donors in the user's home page
+    console.log(compatibleDonors);
+  });
+});
+
+
+
+
+import { doc, setDoc } from "firebase/firestore";
+
+// Define the chat data
+const chatData = {
+  participants: [userId1, userId2],
+  messages: [],
+};
+
+// Get a reference to the chat document
+const chatDocRef = doc(db, "chats", `${userId1}_${userId2}`);
+
+// Add the chat data to Firestore
+try {
+  await setDoc(chatDocRef, chatData);
+  console.log("Chat added successfully!");
+} catch (error) {
+  console.error("Error adding chat: ", error);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import React, { useState, useEffect } from "react";
+import { View, Text, Image } from "react-native";
+import { getDocs, collection, doc, getDoc } from "firebase/firestore";
+
+const MyChats = ({ currentUser }) => {
+  const [chats, setChats] = useState([]);
+
+  useEffect(() => {
+    const fetchChats = async () => {
+      // Retrieve the chat IDs array from the user's document in the `myChats` collection
+      const myChatsDoc = await getDoc(doc(db, "myChats", currentUser.uid));
+      const chatIds = myChatsDoc.data().chatIds;
+
+      // Retrieve the corresponding chat documents from the `chats` collection
+      const chats = [];
+      for (const chatId of chatIds) {
+        const chatDoc = await getDoc(doc(db, "chats", chatId));
+        const chatData = chatDoc.data();
+
+        // Extract the IDs of the two users participating in the chat
+        const userIds = Object.keys(chatData.users);
+
+        // Retrieve the name and image profile of the other user
+        const otherUserId = userIds.find((userId) => userId !== currentUser.uid);
+        const otherUserDoc = await getDoc(doc(db, "users", otherUserId));
+        const otherUserData = otherUserDoc.data();
+
+        // Add the chat data and other user data to the `chats` array
+        chats.push({
+          id: chatId,
+          name: otherUserData.name,
+          imageUrl: otherUserData.imageUrl,
+          lastMessage: chatData.lastMessage,
+        });
+      }
+
+      setChats(chats);
+    };
+
+    fetchChats();
+  }, [currentUser]);
+
+  return (
+    <View>
+      {chats.map((chat) => (
+        <View key={chat.id}>
+          <Image source={{ uri: chat.imageUrl }} />
+          <Text>{chat.name}</Text>
+          <Text>{chat.lastMessage}</Text>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+export default MyChats;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+useEffect(() => {
+  const chatRef = collection(db, "myChats");
+  const q = where("ChatParticipants", "array-contains", userm.uid);
+  const unsubscribe = onSnapshot(
+    query(chatRef, q),
+    async (snapshot) => {
+      const chats = [];
+      const bloodDonors = {};
+      
+      // Fetch all the BloodDonor documents in parallel
+      const otherParticipantIds = snapshot.docs.map((doc) => {
+        const chatData = doc.data();
+        const otherParticipantId = chatData.participants.find(
+          (participantId) => participantId !== userm.uid
+        );
+        return otherParticipantId;
+      });
+      const bloodDonorDocRefs = otherParticipantIds.map((otherParticipantId) => {
+        return doc(db, "BloodDonors", otherParticipantId);
+      });
+      const bloodDonorDocs = await Promise.all(bloodDonorDocRefs.map(getDoc));
+      bloodDonorDocs.forEach((bloodDonorDoc, i) => {
+        const otherParticipantId = otherParticipantIds[i];
+        const bloodDonorData = bloodDonorDoc.data();
+        bloodDonors[otherParticipantId] = bloodDonorData;
+      });
+      
+      // Combine the Chat and BloodDonor data and update the state
+      snapshot.docs.forEach((doc) => {
+        const chatData = doc.data();
+        const otherParticipantId = chatData.participants.find(
+          (participantId) => participantId !== userm.uid
+        );
+        const chat = {
+          chatId: doc.id,
+          otherParticipantId,
+          ...chatData,
+          bloodDonorData: bloodDonors[otherParticipantId]
+        };
+        chats.push(chat);
+      });
+      setChats(chats);
+    },
+    (error) => {
+      console.log(error);
+    }
+  );
+  return () => unsubscribe();
+}, [userm.uid]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+useEffect(() => {
+  try { 
+  console.log(userId)
+  const fetchData = async () => {
+    const userSnapshot = await getDoc(doc(db, "BloodDonors", userId));
+    const userBloodType = userSnapshot.data().bloodType;
+    
+    console.log(userBloodType)
+    // const aboCompatibility = {
+    //   O: ["O+", "O-"],
+    //   A: ["A+", "A-", "O+", "O-"],
+    //   B: ["B+", "B-", "O+", "O-"],
+    //   AB: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+    // };
+    // const rhCompatibility = {
+    //   "+": ["+", "-"],
+    //   "-": ["-"],
+    // };
+    // const querySnapshot = await getDocs(collection(db, "BloodDonors"));
+    // const donors = [];
+    // querySnapshot.forEach((doc) => {
+    //   const donorBloodType = doc.data().bloodType;
+    //   if (
+    //     aboCompatibility[userBloodType.split(/[+-]/)[0]].includes(
+    //       donorBloodType
+    //     ) &&
+    //     rhCompatibility[userBloodType.split(/[+-]/)[1]].includes(
+    //       donorBloodType.split(/[+-]/)[1]
+    //     )
+    //   ) {
+    //     donors.push(doc.id);
+    //   }
+    // });
+    // console.log(donors)
+    // setCompatibleDonors(donors);
+  };
+  fetchData();
+  }catch{
+  Alert("Error")
+  }
+}, [userId]);
