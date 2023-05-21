@@ -1,6 +1,6 @@
 # BDNDonor-App
 
-Mobile donor finder android app react native
+Mobile donor finder android app react native.
 
 This is an adroid app craeted with React native.
 
@@ -10,4 +10,4 @@ The mobile app links blood donors with recepients and has a recommendation syste
 
 Technologies used;
 
-React native, Firebase, Javascript, Node.Js, React Redux
+React native, Firebase, Javascript, Node.Js, React Redux.
