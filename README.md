@@ -10,4 +10,4 @@ The mobile app links blood donors with recepients and has a recommendation syste
 
 Technologies used;
 
-React native, Firebase, Javascript, Node.Js, React Redux.
+React native, Firebase, Javascript, Node.Js, React Redux, Google maps.
