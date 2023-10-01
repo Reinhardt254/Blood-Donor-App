@@ -1,4 +1,4 @@
-# BDNDonor-App
+# Blood Donor App
 
 Mobile donor finder android app react native.
 
