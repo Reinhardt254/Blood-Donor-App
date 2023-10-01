@@ -1,6 +1,6 @@
-# Blood Donor App
+# Blood Donor Finder App
 
-Mobile donor finder android app react native.
+Blood donor finder android app react native.
 
 This is an adroid app craeted with React native.
 
