@@ -2,7 +2,7 @@
 
 Blood donor finder android app react native.
 
-This is an adroid app craeted with React native.
+This is an adroid app created with React native.
 
 It implements react native features, google maps, authentication with firebase, firebase firestore storage and files storage in firebase.
 
